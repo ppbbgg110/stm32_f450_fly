@@ -1,0 +1,371 @@
+#include "stm32f10x.h"
+#include<stdio.h>
+
+#define LED_OFF GPIO_SetBits(GPIOC, GPIO_Pin_13)       //低电平LED亮
+#define LED_ON GPIO_ResetBits(GPIOC, GPIO_Pin_13)      //高电平LED熄
+
+#define P_OFF GPIO_SetBits(GPIOB, GPIO_Pin_12)
+#define P_ON GPIO_ResetBits(GPIOB, GPIO_Pin_12)
+
+
+int fputc(int ch, FILE *f)
+{
+	/* 发送一个字节数据到USART1 */
+	USART_SendData(USART2, (u8) ch);
+	
+	/* 等待发送完毕 */
+		while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+	
+	return (ch);
+}
+
+//C13针脚始化
+void GPIO_Config(void)                           
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13; 
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 
+    GPIO_Init(GPIOC, &GPIO_InitStructure); 
+	
+	
+	  GPIO_InitTypeDef GPIO_Inits;
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+    GPIO_Inits.GPIO_Pin = GPIO_Pin_12; 
+    GPIO_Inits.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_Inits.GPIO_Mode = GPIO_Mode_Out_OD; 
+    GPIO_Init(GPIOB, &GPIO_Inits); 
+
+}
+
+
+
+//usart2初始化
+void USART2_Init(u32 My_BaudRate)
+{
+	GPIO_InitTypeDef GPIO_InitStrue;
+	USART_InitTypeDef USART_InitStrue;
+	NVIC_InitTypeDef NVIC_InitStrue;
+	
+	// 外设使能时钟
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
+	USART_DeInit(USART2);  //复位串口2 -> 可以没有
+	
+	// 初始化 串口对应IO口  TX-PA2  RX-PA3
+	GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;
+	GPIO_InitStrue.GPIO_Pin=GPIO_Pin_2;
+	GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA,&GPIO_InitStrue);
+	
+	GPIO_InitStrue.GPIO_Mode=GPIO_Mode_IN_FLOATING;
+	GPIO_InitStrue.GPIO_Pin=GPIO_Pin_3;
+  GPIO_Init(GPIOA,&GPIO_InitStrue);
+	
+	
+	// 初始化 串口模式状态
+	USART_InitStrue.USART_BaudRate=My_BaudRate; // 波特率
+	USART_InitStrue.USART_HardwareFlowControl=USART_HardwareFlowControl_None; // 硬件流控制
+	USART_InitStrue.USART_Mode=USART_Mode_Tx|USART_Mode_Rx; // 发送 接收 模式都使用
+	USART_InitStrue.USART_Parity=USART_Parity_No; // 没有奇偶校验
+	USART_InitStrue.USART_StopBits=USART_StopBits_1; // 一位停止位
+	USART_InitStrue.USART_WordLength=USART_WordLength_8b; // 每次发送数据宽度为8位
+	USART_Init(USART2,&USART_InitStrue);
+	
+	USART_Cmd(USART2,ENABLE);//使能串口
+	USART_ITConfig(USART2,USART_IT_RXNE,ENABLE);//开启接收中断
+	//USART_ITConfig(USART2,USART_IT_TXE,ENABLE);//开启发送中断
+	USART_ITConfig(USART2,USART_IT_IDLE,ENABLE);//开启空闲中断
+	
+	
+	// 初始化 中断优先级
+	NVIC_InitStrue.NVIC_IRQChannel=USART2_IRQn;
+	NVIC_InitStrue.NVIC_IRQChannelCmd=ENABLE;
+	NVIC_InitStrue.NVIC_IRQChannelPreemptionPriority=0;
+	NVIC_InitStrue.NVIC_IRQChannelSubPriority=0;
+	NVIC_Init(&NVIC_InitStrue);
+}
+
+//usart3初始化
+void USART3_Init(u32 My_BaudRate)
+{
+	GPIO_InitTypeDef GPIO_InitStrue;
+	USART_InitTypeDef USART_InitStrue;
+	NVIC_InitTypeDef NVIC_InitStrue;
+	
+	// 外设使能时钟
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB,ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3,ENABLE);
+	USART_DeInit(USART3);  //复位串口3 -> 可以没有
+	
+	// 初始化 串口对应IO口  TX-PB10  RX-PB11
+	GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;
+	GPIO_InitStrue.GPIO_Pin=GPIO_Pin_10;
+	GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;
+	GPIO_Init(GPIOB,&GPIO_InitStrue);
+	
+	GPIO_InitStrue.GPIO_Mode=GPIO_Mode_IN_FLOATING;
+	GPIO_InitStrue.GPIO_Pin=GPIO_Pin_11;
+  GPIO_Init(GPIOB,&GPIO_InitStrue);
+	
+	
+	
+	// 初始化 串口模式状态
+	USART_InitStrue.USART_BaudRate=My_BaudRate; // 波特率
+	USART_InitStrue.USART_HardwareFlowControl=USART_HardwareFlowControl_None; // 硬件流控制
+	USART_InitStrue.USART_Mode=USART_Mode_Tx|USART_Mode_Rx; // 发送 接收 模式都使用
+	USART_InitStrue.USART_Parity=USART_Parity_No; // 没有奇偶校验
+	USART_InitStrue.USART_StopBits=USART_StopBits_1; // 一位停止位
+	USART_InitStrue.USART_WordLength=USART_WordLength_8b; // 每次发送数据宽度为8位
+	USART_Init(USART3,&USART_InitStrue);
+	
+	USART_Cmd(USART3,ENABLE);//使能串口
+	USART_ITConfig(USART3,USART_IT_RXNE,ENABLE);//开启接收中断
+	//USART_ITConfig(USART3,USART_IT_TXE,ENABLE);//开启发送中断
+	USART_ITConfig(USART3,USART_IT_IDLE,ENABLE);//开启空闲中断
+	
+	// 初始化 中断优先级
+	NVIC_InitStrue.NVIC_IRQChannel=USART3_IRQn;
+	NVIC_InitStrue.NVIC_IRQChannelCmd=ENABLE;
+	NVIC_InitStrue.NVIC_IRQChannelPreemptionPriority=0;
+	NVIC_InitStrue.NVIC_IRQChannelSubPriority=0;
+	NVIC_Init(&NVIC_InitStrue);
+}
+ 
+
+
+
+//发送单个字符
+void send_char(USART_TypeDef *USARTx,u8 temp)      
+{        
+    USART_SendData(USARTx,(u8)temp);        
+    while(USART_GetFlagStatus(USART2,USART_FLAG_TXE)==RESET);         
+}
+
+//发送字符串
+void send_buff(USART_TypeDef *USARTx,u8 buf[])     
+{    
+    u32 i;    
+    for(i=0;i<strlen(buf);i++)    
+		send_char(USARTx,buf[i]);   
+    send_char(USARTx,'\r');  
+    send_char(USARTx,'\n');  
+}
+
+void send(USART_TypeDef *USARTx,u8 buf[])     
+{    
+    u32 i;    
+    for(i=0;i<strlen(buf);i++)    
+		send_char(USARTx,buf[i]);   
+}
+
+void send_data(USART_TypeDef *USARTx,u8 *s)
+{
+	while(*s!='\0')
+	{ //USART_GetFlagStatus(USARTx,USART_FLAG_TXE )==RESET
+		while(USART_GetFlagStatus(USARTx,USART_FLAG_TXE )==RESET);	
+		USART_SendData(USARTx,*s);
+		s++;
+	}
+}
+
+
+typedef struct {
+    char buff[33];
+    int i;
+    int flag;
+		int Length;
+}Usart_Struct;
+
+Usart_Struct ss2,ss3;
+
+int length=4;
+uint8_t ch2;
+uint8_t ch3;
+uint8_t buff[33];
+uint8_t buff3[4];
+int flag2=0;
+int flag3=0;
+//usart2中断
+void USART2_IRQHandler(void)
+{
+    uint8_t ch;
+#ifdef SYSTEM_SUPPORT_OS        
+    OSIntEnter();    
+#endif
+    if(USART_GetITStatus(USART2,USART_IT_RXNE) != RESET)
+    {
+        USART_ClearITPendingBit(USART2,USART_IT_RXNE);
+        ch = USART_ReceiveData(USART2);
+				//USART_SendData(USART3,ch);
+       
+       
+    }
+    else if( USART_GetITStatus( USART2, USART_IT_IDLE ) == SET )
+    {
+				USART2->SR;
+				USART2->DR;
+        //USART_ClearITPendingBit(USART2,USART_IT_IDLE);
+        //ss2.flag = 1;
+        //ch = USART_ReceiveData(USART2);
+			
+    }
+#ifdef SYSTEM_SUPPORT_OS     
+    OSIntExit();                                             
+#endif
+}
+
+
+void USART3_IRQHandler(void)
+{
+ uint8_t ch=ch;
+ if(USART_GetITStatus(USART3,USART_IT_RXNE) == SET)    //接收缓存高电平
+    {
+			ch= USART_ReceiveData(USART3);
+		  ss3.buff[ss3.Length]=ch; 
+			ss3.Length+=1;
+		 
+    }
+    else if( USART_GetITStatus( USART3, USART_IT_IDLE ) == SET )  //空闲缓存高电平
+    {
+			//USART_ClearITPendingBit(USART3,USART_IT_IDLE);
+			USART3->SR;
+			USART3->DR;
+			ss3.flag=1;
+			//printf("%d \r\n",ss3.Length);
+			//printf("%d \r\n",strlen(ss3.buff));
+			
+		}
+		
+
+}
+
+int LED_wave(void)
+{
+int i=0;
+while(i++<5)
+{
+LED_ON;
+delay(1000);
+LED_OFF;
+delay(300);
+}
+}
+
+//延时
+void delay(u32 t)
+{
+u16 i;
+while(t--)
+for(i=0;i<1000;i++);
+}
+
+
+
+
+
+int init_user(void)
+{
+
+delay(100);
+GPIO_Config();
+delay(100);
+P_ON;
+delay(10);
+P_OFF;
+delay(100);
+USART2_Init(115200);
+delay(100);
+USART3_Init(115200);
+delay(100);
+LED_wave();
+send_data(USART2,"hello,world\r\n");
+}
+
+int AngleCar;
+float a[3],w[3],angle[3],T,x,y,z,tt,sx=0,sy=0,sz=0,st=0,wsx=0,wsy=0,wsz=0,asx=0,asy=0,asz=0;
+int avg=0;
+int sum=50;
+
+
+int main()
+{
+init_user();
+
+
+while(1)
+{
+delay(50);
+int s=0;
+
+if(ss3.flag==1)
+{
+
+if(ss3.Length==33)
+{
+while(ss3.Length--)
+{
+buff[s]=ss3.buff[s];
+//printf("%c",buff[s]);
+s++;
+}
+if(buff[0]==0x55&&buff[11]==0x55&&buff[22]==0x55)
+{
+if(buff[1]==0x51)
+{
+	//printf("%x",buff[1]);
+	  a[0] = ((short)(buff[3]<<8 | buff[2]))/32768.0*16;      //X轴加速度
+    a[1] = ((short)(buff[5]<<8 | buff[4]))/32768.0*16;      //Y轴加速度
+    a[2] = ((short)(buff[7]<<8 | buff[6]))/32768.0*16;      //Z轴加速度
+    T    = ((short)(buff[9]<<8 | buff[8]))/340.0+36.25;      //温度
+	//printf(" X%.2f  Y%.2f  Z%.2f  T%.2f\r\n",a[0],a[1],a[2],T);
+	  w[0] = ((short)(buff[14]<<8| buff[13]))/32768.0*2000;      //X轴角速度
+    w[1] = ((short)(buff[16]<<8| buff[15]))/32768.0*2000;      //Y轴角速度
+    w[2] = ((short)(buff[18]<<8| buff[17]))/32768.0*2000;      //Z轴角速度
+	
+		angle[0] = ((short)(buff[25]<<8 | buff[24]))/32768.0*180; ;      //X轴加速度
+    angle[1] = ((short)(buff[27]<<8 | buff[26]))/32768.0*180; ;      //Y轴加速度
+    angle[2] = ((short)(buff[29]<<8 | buff[28]))/32768.0*180; ;      //Z轴加速度
+	
+	wsx+=w[0];wsy+=w[1];wsz+=w[2];
+	sx+=a[0];	sy+=a[1];	sz+=a[2];
+	asx+=angle[0];asy+=angle[1];asz+=angle[2];
+	st+=T;
+	avg++;
+//	printf("AVG%d X%.2f  Y%.2f  Z%.2f  T%.2f\r\n",avg,sx,sy,sz,st);
+if(avg==sum)
+{
+x=(sx/sum);
+y=(sy/sum);
+z=(sz/sum);
+tt=(st/sum);
+printf(" X%.2f  Y%.2f  Z%.2f  T%.2f\r\n",x,y,z,tt);
+
+printf(" WX%.2f  WY%.2f  WZ%.2f  \r\n",wsx/sum,wsy/sum,wsz/sum);
+	
+printf(" AX%.2f  AY%.2f  AZ%.2f  \r\n",asx/sum,asy/sum,asz/sum);
+sx=0,sy=0,sz=0,st=0;
+wsx=0,wsy=0,wsz=0,asx=0,asy=0,asz=0;
+avg=0;
+}
+	
+	
+}
+
+
+
+
+
+}
+
+}
+
+
+	
+ss3.flag=0;
+ss3.Length=0;
+}
+
+}
+}

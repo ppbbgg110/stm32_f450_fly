@@ -1,0 +1,14 @@
+A2 usart2 out
+
+A2A3  console printf   (SEND printf info)
+
+B11  usart3 in
+B10B11  WIFI modern    (REC control command)
+
+A6 A7 B0 B1  Four Motor  PWM signal   (PWM control motor circling)
+
+
+
+
+
+IIC  independing  pwm modern
